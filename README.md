@@ -7,9 +7,15 @@ MangaDex para proteger a API externa contra excesso de requisições e para trad
 A página consulta dados públicos, monta uma programação para os próximos dias, permite pesquisar e filtrar títulos,
 apresenta destaques da temporada e permite buscar mangás com capítulos em português.
 
-![Tela inicial do Animanga Wiki](./docs/screenshots/animanga-home.png)
+## Projeto publicado
+
+🌐 [Acesse o Animanga Wiki](https://animanga-wiki.onrender.com)
 
 ## Visualização do projeto
+
+![Tela inicial do Animanga Wiki](./docs/screenshots/animanga-home.png)
+
+![Tela inicial do Animanga Wiki](./docs/screenshots/animanga-home.png)
 
 ### Calendário semanal
 
@@ -119,26 +125,26 @@ Animanga Wiki/
 
 ### Papel dos arquivos do front-end
 
-| Arquivo | Responsabilidade |
-| --- | --- |
-| `public/index.html` | Estrutura do cabeçalho, hero, calendário, filtros, busca de anime, destaques, biblioteca de mangás e rodapé. |
-| `public/style.css` | Temas, tipografia, layout, cards, estados, responsividade e redução de movimento. |
-| `public/sinopses-pt.js` | Dicionário congelado de sinopses em português, indexado por `mal_id`. |
-| `public/index.js` | Consulta a Jikan e a AniList, estado do calendário e dos destaques, renderização, eventos, tema, datas e menu ativo. |
-| `public/mangas.js` | Busca de mangás, ficha de detalhe e paginação de capítulos, consumindo a API própria do servidor em `/api/mangas`. |
+| Arquivo                 | Responsabilidade                                                                                                     |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `public/index.html`     | Estrutura do cabeçalho, hero, calendário, filtros, busca de anime, destaques, biblioteca de mangás e rodapé.         |
+| `public/style.css`      | Temas, tipografia, layout, cards, estados, responsividade e redução de movimento.                                    |
+| `public/sinopses-pt.js` | Dicionário congelado de sinopses em português, indexado por `mal_id`.                                                |
+| `public/index.js`       | Consulta a Jikan e a AniList, estado do calendário e dos destaques, renderização, eventos, tema, datas e menu ativo. |
+| `public/mangas.js`      | Busca de mangás, ficha de detalhe e paginação de capítulos, consumindo a API própria do servidor em `/api/mangas`.   |
 
 ### Papel dos arquivos do back-end
 
-| Arquivo | Responsabilidade |
-| --- | --- |
-| `server.js` | Cria o servidor Express, aplica `helmet`, CSP, limites de taxa, serve `public/` e monta as rotas de `/api`. |
-| `src/routes/mangas.routes.js` | Define as rotas `GET /mangas`, `GET /mangas/:id` e `GET /mangas/:id/capitulos`. |
-| `src/controllers/mangas.controller.js` | Valida os parâmetros recebidos e traduz erros do serviço em respostas HTTP. |
-| `src/services/mangadex.service.js` | Consulta o MangaDex, normaliza os dados e aplica o limitador de taxa próprio. |
-| `src/services/traducao.service.js` | Traduz descrições de mangá para português via MyMemory, com orçamento diário de caracteres e cache de 24 horas. |
-| `src/utils/cache.js` | Cache em memória com expiração e coalescência de requisições simultâneas idênticas. |
-| `src/utils/protecaoExterna.js` | Fila com intervalo mínimo entre chamadas e circuito de proteção contra respostas 429 de APIs externas. |
-| `src/middlewares/error.middleware.js` | Resposta padrão para rota não encontrada e para erro não tratado. |
+| Arquivo                                | Responsabilidade                                                                                                |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `server.js`                            | Cria o servidor Express, aplica `helmet`, CSP, limites de taxa, serve `public/` e monta as rotas de `/api`.     |
+| `src/routes/mangas.routes.js`          | Define as rotas `GET /mangas`, `GET /mangas/:id` e `GET /mangas/:id/capitulos`.                                 |
+| `src/controllers/mangas.controller.js` | Valida os parâmetros recebidos e traduz erros do serviço em respostas HTTP.                                     |
+| `src/services/mangadex.service.js`     | Consulta o MangaDex, normaliza os dados e aplica o limitador de taxa próprio.                                   |
+| `src/services/traducao.service.js`     | Traduz descrições de mangá para português via MyMemory, com orçamento diário de caracteres e cache de 24 horas. |
+| `src/utils/cache.js`                   | Cache em memória com expiração e coalescência de requisições simultâneas idênticas.                             |
+| `src/utils/protecaoExterna.js`         | Fila com intervalo mínimo entre chamadas e circuito de proteção contra respostas 429 de APIs externas.          |
+| `src/middlewares/error.middleware.js`  | Resposta padrão para rota não encontrada e para erro não tratado.                                               |
 
 ## Arquitetura
 
