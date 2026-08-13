@@ -7,6 +7,34 @@ MangaDex para proteger a API externa contra excesso de requisições e para trad
 A página consulta dados públicos, monta uma programação para os próximos dias, permite pesquisar e filtrar títulos,
 apresenta destaques da temporada e permite buscar mangás com capítulos em português.
 
+![Tela inicial do Animanga Wiki](./docs/screenshots/animanga-home.png)
+
+## Visualização do projeto
+
+### Calendário semanal
+
+![Calendário semanal do Animanga Wiki](./docs/screenshots/animanga-calendario.png)
+
+### Biblioteca de mangás
+
+![Biblioteca de mangás do Animanga Wiki](./docs/screenshots/animanga-mangas.png)
+
+### Detalhes e capítulos
+
+![Ficha de detalhes de um mangá](./docs/screenshots/animanga-detalhe-manga.png)
+
+### Interface responsiva
+
+<p align="center">
+  <img src="./docs/screenshots/animanga-mobile.png" alt="Página inicial do Animanga Wiki em dispositivo móvel" width="280">
+  <img src="./docs/screenshots/animanga-mobile-calendario.png" alt="Calendário do Animanga Wiki em dispositivo móvel" width="280">
+</p>
+
+<p align="center">
+  <img src="./docs/screenshots/animanga-mobile-mangas.png" alt="Biblioteca de mangás do Animanga Wiki em dispositivo móvel" width="280">
+  <img src="./docs/screenshots/animanga-mobile-detalhe.png" alt="Detalhes de mangá do Animanga Wiki em dispositivo móvel" width="280">
+</p>
+
 ## Funcionalidades
 
 - programação de animes dos próximos sete dias;
@@ -527,4 +555,4 @@ oficial.
 
 ## Licença
 
-Projeto pessoal. © 2026 Shalana Xavier. Todos os direitos reservados.
+Projeto pessoal — © 2026 Shalana Xavier. Todos os direitos reservados.
