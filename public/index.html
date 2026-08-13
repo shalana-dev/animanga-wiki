@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Acompanhe lançamentos, horários e destaques da temporada de animes em um só lugar."
+    />
+    <meta name="theme-color" content="#0c0d10" />
+    <link rel="preconnect" href="https://graphql.anilist.co" />
+    <link rel="preconnect" href="https://s4.anilist.co" crossorigin />
+    <link rel="stylesheet" href="style.css?v=1" />
+    <title>Animanga - Guia da temporada</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+    <header class="cabecalho">
+      <a class="marca" href="#" aria-label="Animanga, página inicial">
+        <span class="marca-simbolo" aria-hidden="true">ア</span>
+        <span>ANIMANGA</span>
+      </a>
+
+      <nav class="menu" aria-label="Navegação principal">
+        <a class="ativo" href="#inicio" aria-current="page">Início</a>
+        <a href="#calendario">Calendário</a>
+        <a href="#destaques">Destaques</a>
+        <a href="#mangas">Mangás</a>
+      </nav>
+
+      <button
+        class="botao-icone"
+        id="alternar-tema"
+        type="button"
+        aria-label="Alternar tema"
+      >
+        <svg class="icone-sol" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path
+            d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"
+          ></path>
+        </svg>
+        <svg class="icone-lua" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <main id="conteudo">
+      <section class="hero" id="inicio" aria-labelledby="titulo-principal">
+        <div class="hero-marcador" aria-hidden="true">
+          <span>AMW</span>
+          <span>EDIÇÃO 01</span>
+        </div>
+
+        <div class="hero-conteudo">
+          <div class="hero-meta">
+            <span>GUIA DE TEMPORADA</span>
+            <time id="hero-data"></time>
+          </div>
+
+          <h1 id="titulo-principal">
+            <span>O que vai</span>
+            <span class="hero-serif">entrar na sua</span>
+            <span>lista esta semana?</span>
+          </h1>
+
+          <p class="hero-texto">
+            Horários, episódios e títulos da temporada, atualizados para o seu
+            fuso.
+          </p>
+
+          <div class="hero-acoes">
+            <a class="botao-principal" href="#calendario">
+              Abrir programação
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m9 18 6-6-6-6"></path>
+              </svg>
+            </a>
+            <div class="hero-total">
+              <strong id="total-hero">...</strong>
+              <span>títulos nos<br />próximos 7 dias</span>
+            </div>
+          </div>
+        </div>
+
+        <aside class="hero-agora" aria-label="Próximas exibições">
+          <header class="hero-agora-cabecalho">
+            <span>PRÓXIMAS EXIBIÇÕES</span>
+            <span class="hero-ao-vivo"><i></i> ATUALIZADO</span>
+          </header>
+          <ol id="hero-lista" class="hero-lista">
+            <li class="hero-lista-carregando">Lendo a programação...</li>
+          </ol>
+          <footer class="hero-agora-rodape">
+            <span>HORÁRIO LOCAL</span>
+            <span>ANILIST / LIVE DATA</span>
+          </footer>
+        </aside>
+
+        <div class="hero-faixa" aria-hidden="true">
+          <span>AÇÃO</span><i></i><span>ROMANCE</span><i></i><span>ISEKAI</span
+          ><i></i><span>COMÉDIA</span><i></i><span>DRAMA</span><i></i
+          ><span>FANTASIA</span>
+        </div>
+      </section>
+
+      <section
+        class="secao calendario-secao"
+        id="calendario"
+        aria-labelledby="titulo-calendario"
+      >
+        <div class="secao-cabecalho">
+          <div>
+            <p class="indice">01 - PROGRAMAÇÃO</p>
+            <h2 id="titulo-calendario">Calendário semanal</h2>
+          </div>
+          <label class="busca">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-4-4"></path>
+            </svg>
+            <span class="sr-only">Buscar anime</span>
+            <input
+              id="busca-anime"
+              type="search"
+              placeholder="Buscar anime..."
+              autocomplete="off"
+            />
+          </label>
+        </div>
+
+        <div
+          class="dias-filtro"
+          role="tablist"
+          aria-label="Filtrar calendário por dia"
+        >
+          <button
+            class="dia-filtro ativo"
+            data-dia="todos"
+            role="tab"
+            aria-selected="true"
+          >
+            Todos
+          </button>
+          <button
+            class="dia-filtro"
+            data-dia="segunda"
+            role="tab"
+            aria-selected="false"
+          >
+            Seg
+          </button>
+          <button
+            class="dia-filtro"
+            data-dia="terca"
+            role="tab"
+            aria-selected="false"
+          >
+            Ter
+          </button>
+          <button
+            class="dia-filtro"
+            data-dia="quarta"
+            role="tab"
+            aria-selected="false"
+          >
+            Qua
+          </button>
+          <button
+            class="dia-filtro"
+            data-dia="quinta"
+            role="tab"
+            aria-selected="false"
+          >
+            Qui
+          </button>
+          <button
+            class="dia-filtro"
+            data-dia="sexta"
+            role="tab"
+            aria-selected="false"
+          >
+            Sex
+          </button>
+          <button
+            class="dia-filtro"
+            data-dia="sabado"
+            role="tab"
+            aria-selected="false"
+          >
+            Sáb
+          </button>
+          <button
+            class="dia-filtro"
+            data-dia="domingo"
+            role="tab"
+            aria-selected="false"
+          >
+            Dom
+          </button>
+        </div>
+
+        <div
+          id="estado-calendario"
+          class="estado-carregando"
+          role="status"
+          aria-live="polite"
+        >
+          <span class="spinner"></span>
+          <span>Organizando a semana...</span>
+        </div>
+        <div
+          id="grade-calendario"
+          class="grade-calendario"
+          aria-live="polite"
+        ></div>
+        <div id="mensagem-calendario" class="mensagem-estado" hidden></div>
+      </section>
+
+      <section
+        class="secao destaques-secao"
+        id="destaques"
+        aria-labelledby="titulo-destaques"
+      >
+        <div class="secao-cabecalho">
+          <div>
+            <p class="indice">02 - EM ALTA</p>
+            <h2 id="titulo-destaques">Destaques da temporada</h2>
+          </div>
+          <div class="contador-slides" aria-live="polite">
+            <span id="slide-atual">01</span><span class="traco"></span
+            ><span id="slide-total">...</span>
+          </div>
+        </div>
+
+        <div
+          id="estado-destaques"
+          class="estado-carregando"
+          role="status"
+          aria-live="polite"
+        >
+          <span class="spinner"></span>
+          <span>Buscando destaques...</span>
+        </div>
+
+        <article id="cartao-destaque" class="cartao-destaque" hidden>
+          <div class="imagem-container">
+            <img
+              class="destaque-imagem"
+              src=""
+              alt=""
+              decoding="async"
+              fetchpriority="high"
+            />
+            <span class="destaque-posicao"></span>
+          </div>
+          <div class="destaque-conteudo">
+            <div class="destaque-meta">
+              <span class="destaque-tipo"></span>
+              <span class="destaque-status"></span>
+            </div>
+            <h3 class="destaque-titulo"></h3>
+            <div class="destaque-nota">
+              <span aria-hidden="true">★</span>
+              <strong></strong>
+              <small>MyAnimeList</small>
+            </div>
+            <p class="destaque-sinopse"></p>
+            <div class="destaque-acoes">
+              <a
+                class="botao-principal destaque-link"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Ver detalhes
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </a>
+              <div class="navegacao">
+                <button
+                  id="anterior"
+                  class="botao-icone"
+                  type="button"
+                  aria-label="Destaque anterior"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m15 18-6-6 6-6"></path>
+                  </svg>
+                </button>
+                <button
+                  id="proximo"
+                  class="botao-icone"
+                  type="button"
+                  aria-label="Próximo destaque"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m9 18 6-6-6-6"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </article>
+        <div id="mensagem-destaques" class="mensagem-estado" hidden></div>
+      </section>
+
+      <section
+        class="secao mangas-secao"
+        id="mangas"
+        aria-labelledby="titulo-mangas"
+      >
+        <div class="secao-cabecalho">
+          <div>
+            <p class="indice">03 - MANGÁS</p>
+            <h2 id="titulo-mangas">Biblioteca de mangás</h2>
+          </div>
+          <form class="busca busca-mangas" id="form-busca-mangas" role="search">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-4-4"></path>
+            </svg>
+            <label class="sr-only" for="busca-manga">Buscar mangá</label>
+            <input
+              id="busca-manga"
+              type="search"
+              placeholder="Buscar mangá..."
+              autocomplete="off"
+              required
+            />
+            <button type="submit" class="botao-buscar-manga">Buscar</button>
+          </form>
+        </div>
+
+        <div
+          id="estado-mangas"
+          class="estado-carregando"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          <span class="spinner"></span>
+          <span id="estado-mangas-texto">Procurando mangás...</span>
+        </div>
+
+        <div id="grade-mangas" class="grade-mangas" aria-live="polite" hidden></div>
+
+        <div class="colecao-mangas-acoes">
+          <button
+            type="button"
+            id="botao-expandir-colecao"
+            class="botao-principal"
+            aria-expanded="false"
+            aria-controls="grade-mangas"
+            hidden
+          >
+            Mostrar mais
+          </button>
+        </div>
+
+        <div id="mensagem-mangas" class="mensagem-estado" hidden></div>
+
+        <div id="detalhe-manga" class="detalhe-manga" hidden></div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="marca" href="#" aria-label="Animanga">
+        <span class="marca-simbolo" aria-hidden="true">ア</span>
+        <span>ANIMANGA</span>
+      </a>
+      <p>Dados fornecidos por Jikan / MyAnimeList.</p>
+      <p>Feito de fã para fã! 💘</p>
+    </footer>
+
+    <script src="sinopses-pt.js?v=1"></script>
+    <script src="index.js?v=2"></script>
+    <script src="mangas.js?v=1"></script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+node_modules/
+
+# Variáveis de ambiente. O modelo público fica em .env.example.
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Arquivos temporários
+*.tmp
+
+# Cobertura de testes ou build, caso passem a existir
+coverage/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Configurações locais de editores e ferramentas
+.vscode/
+.idea/
