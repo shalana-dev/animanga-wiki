@@ -2,6 +2,7 @@ import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mangasRoutes from "./src/routes/mangas.routes.js";
+import animesRoutes from "./src/routes/animes.routes.js";
 import { rotaNaoEncontrada, tratarErro } from "./src/middlewares/error.middleware.js";
 
 const app = express();
@@ -40,7 +41,9 @@ app.use(
           "https://s4.anilist.co",
           "https://uploads.mangadex.org",
         ],
-        connectSrc: ["'self'", "https://api.jikan.moe", "https://graphql.anilist.co"],
+        // anime e mangá agora passam pelo back-end (/api); o navegador só fala
+        // com a própria origem
+        connectSrc: ["'self'"],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
@@ -72,6 +75,7 @@ app.use("/api/mangas", limitadorBusca);
 
 app.use(express.static("public"));
 app.use("/api", mangasRoutes);
+app.use("/api", animesRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });

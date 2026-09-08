@@ -1,8 +1,9 @@
 # Animanga Wiki
 
 Animanga é um guia de temporada de animes e mangás. O front-end é feito com HTML, CSS e JavaScript puro e roda no
-navegador. A busca de mangás depende de um pequeno back-end em Node.js e Express, que fica entre o navegador e o
-MangaDex para proteger a API externa contra excesso de requisições e para traduzir descrições automaticamente.
+navegador. Um back-end em Node.js e Express fica entre o navegador e as APIs externas (AniList, Jikan e MangaDex):
+ele protege essas APIs contra excesso de requisições, guarda as respostas em cache com reserva da última resposta
+boa e traduz descrições automaticamente. O navegador só conversa com a própria origem (`/api`).
 
 A página consulta dados públicos, monta uma programação para os próximos dias, permite pesquisar e filtrar títulos,
 apresenta destaques da temporada e permite buscar mangás com capítulos em português.
@@ -43,15 +44,16 @@ apresenta destaques da temporada e permite buscar mangás com capítulos em port
 
 ## Funcionalidades
 
-- programação de animes dos próximos sete dias;
-- horários convertidos para o fuso local quando a agenda vem do AniList;
+- programação de animes dos próximos sete dias, servida pelo back-end (AniList, com a programação da Jikan como
+  fallback);
+- horários convertidos para o fuso local de quem acessa quando a agenda vem do AniList (o back-end envia o
+  timestamp Unix e a conversão acontece no navegador);
 - filtro por todos os dias ou por um dia específico;
 - busca de títulos de anime tolerante a maiúsculas, minúsculas e acentos;
 - lista das quatro próximas exibições no hero;
 - destaques da temporada ordenados por nota;
 - navegação circular entre destaques;
-- capas em alta resolução consultadas no AniList quando disponíveis;
-- remoção de animes e imagens repetidos;
+- remoção de animes e imagens repetidos feita no back-end;
 - sinopses locais em português para IDs cadastrados;
 - fallback para a sinopse da API ou mensagem padrão;
 - biblioteca inicial com uma seleção editorial de 20 mangás conhecidos, já visível ao abrir a página, mostrando
@@ -75,15 +77,17 @@ Front-end:
 - JavaScript moderno, sem framework;
 - Fetch API, Promises e `async`/`await`;
 - DOM, `IntersectionObserver`, `AbortController`, `localStorage`, `Intl` e `Date`;
-- APIs Jikan e AniList, consultadas diretamente pelo navegador.
+- consumo apenas da API própria do site (`/api`), nunca de APIs externas direto do navegador.
 
-Back-end (usado só pela busca de mangás):
+Back-end:
 
 - Node.js com Express;
-- `helmet`, com uma política de `Content-Security-Policy` explícita;
+- `helmet`, com uma política de `Content-Security-Policy` explícita (`connect-src 'self'`);
 - `express-rate-limit`, com um limite geral em `/api` e um limite mais restrito em `/api/mangas`;
-- cache em memória com coalescência de requisições simultâneas idênticas;
-- um limitador de taxa e um circuito de proteção próprios para as chamadas ao MangaDex e ao MyMemory;
+- cache em memória com coalescência de requisições simultâneas idênticas e reserva da última resposta boa
+  (`comRespostaDeReserva`) para o calendário e os destaques;
+- um limitador de taxa e um circuito de proteção próprios para cada API externa (AniList, Jikan, MangaDex e
+  MyMemory);
 - testes automatizados com o executor nativo do Node (`node --test`), sem framework de teste externo.
 
 O front-end não passa por processo de build. O back-end é executado diretamente com `node server.js`, sem
@@ -105,21 +109,29 @@ Animanga Wiki/
 │   └── assets/
 ├── src/
 │   ├── routes/
-│   │   └── mangas.routes.js
+│   │   ├── mangas.routes.js
+│   │   └── animes.routes.js
 │   ├── controllers/
-│   │   └── mangas.controller.js
+│   │   ├── mangas.controller.js
+│   │   └── animes.controller.js
 │   ├── services/
 │   │   ├── mangadex.service.js
+│   │   ├── anilist.service.js
+│   │   ├── jikan.service.js
 │   │   └── traducao.service.js
 │   ├── middlewares/
 │   │   └── error.middleware.js
 │   └── utils/
 │       ├── cache.js
-│       └── protecaoExterna.js
+│       ├── protecaoExterna.js
+│       └── erroExterno.js
 └── test/
     ├── cache.test.js
     ├── controller.validacao.test.js
     ├── mangadex.service.test.js
+    ├── anilist.service.test.js
+    ├── jikan.service.test.js
+    ├── animes.controller.test.js
     └── protecaoExterna.test.js
 ```
 
@@ -130,7 +142,7 @@ Animanga Wiki/
 | `public/index.html`     | Estrutura do cabeçalho, hero, calendário, filtros, busca de anime, destaques, biblioteca de mangás e rodapé.         |
 | `public/style.css`      | Temas, tipografia, layout, cards, estados, responsividade e redução de movimento.                                    |
 | `public/sinopses-pt.js` | Dicionário congelado de sinopses em português, indexado por `mal_id`.                                                |
-| `public/index.js`       | Consulta a Jikan e a AniList, estado do calendário e dos destaques, renderização, eventos, tema, datas e menu ativo. |
+| `public/index.js`       | Consome `/api/calendario` e `/api/destaques`, converte o horário do calendário para o fuso local, guarda o estado do calendário e dos destaques, renderização, eventos, tema, datas e menu ativo. |
 | `public/mangas.js`      | Busca de mangás, ficha de detalhe e paginação de capítulos, consumindo a API própria do servidor em `/api/mangas`.   |
 
 ### Papel dos arquivos do back-end
@@ -139,11 +151,16 @@ Animanga Wiki/
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `server.js`                            | Cria o servidor Express, aplica `helmet`, CSP, limites de taxa, serve `public/` e monta as rotas de `/api`.     |
 | `src/routes/mangas.routes.js`          | Define as rotas `GET /mangas`, `GET /mangas/:id` e `GET /mangas/:id/capitulos`.                                 |
+| `src/routes/animes.routes.js`          | Define as rotas `GET /calendario` e `GET /destaques`.                                                           |
 | `src/controllers/mangas.controller.js` | Valida os parâmetros recebidos e traduz erros do serviço em respostas HTTP.                                     |
+| `src/controllers/animes.controller.js` | Serve o calendário (AniList, com fallback para a Jikan) e os destaques (Jikan), traduzindo erros em respostas HTTP. |
 | `src/services/mangadex.service.js`     | Consulta o MangaDex, normaliza os dados e aplica o limitador de taxa próprio.                                   |
+| `src/services/anilist.service.js`      | Consulta a agenda semanal no GraphQL do AniList, normaliza, deduplica e aplica limitador/circuito próprios.     |
+| `src/services/jikan.service.js`        | Consulta os destaques da temporada e a programação alternativa na Jikan, normaliza e deduplica.                 |
 | `src/services/traducao.service.js`     | Traduz descrições de mangá para português via MyMemory, com orçamento diário de caracteres e cache de 24 horas. |
-| `src/utils/cache.js`                   | Cache em memória com expiração e coalescência de requisições simultâneas idênticas.                             |
+| `src/utils/cache.js`                   | Cache em memória com expiração, coalescência de requisições simultâneas idênticas e reserva da última resposta boa. |
 | `src/utils/protecaoExterna.js`         | Fila com intervalo mínimo entre chamadas e circuito de proteção contra respostas 429 de APIs externas.          |
+| `src/utils/erroExterno.js`             | `ErroServicoExterno` e a tradução genérica de erro de serviço externo em resposta HTTP.                         |
 | `src/middlewares/error.middleware.js`  | Resposta padrão para rota não encontrada e para erro não tratado.                                               |
 
 ## Arquitetura
@@ -157,11 +174,11 @@ CSS define aparência e estados
         ↓
 JavaScript seleciona o DOM e registra eventos
         ↓
-Jikan/AniList fornecem dados de anime, direto do navegador
+index.js faz fetch em /api (calendário, destaques) — mesma origem, sem CORS
         ↓
-map/filter/Set/Map tratam os resultados
+o back-end consulta o cache, a fila de proteção e a API externa, e normaliza
         ↓
-objeto estado guarda a versão atual
+objeto estado guarda a versão atual (o calendário converte airingAt para o fuso local)
         ↓
 funções de renderização atualizam o DOM
 ```
@@ -170,18 +187,18 @@ O objeto `estado`, em `index.js`, guarda calendário, destaques, índice atual, 
 objeto `estadoMangas`, em `mangas.js`, guarda os resultados de mangá, o mangá selecionado e a paginação de
 capítulos. Os eventos alteram esses estados e chamam novamente a renderização correspondente.
 
-A busca de mangás segue um caminho diferente, porque passa pelo back-end antes de chegar ao MangaDex:
+Todas as três seções passam pelo back-end antes de chegar às APIs externas. Exemplo com o calendário:
 
 ```text
-mangas.js faz fetch em /api/mangas
+index.js faz fetch em /api/calendario
         ↓
-mangas.routes.js encaminha para mangas.controller.js
+animes.routes.js encaminha para animes.controller.js
         ↓
-mangas.controller.js valida entrada e chama mangadex.service.js
+animes.controller.js chama anilist.service.js (e, se falhar, jikan.service.js)
         ↓
-mangadex.service.js consulta o cache, depois a fila de proteção, depois o MangaDex
+o serviço consulta o cache (com reserva), depois a fila de proteção, depois a API
         ↓
-resposta normalizada volta para o navegador
+resposta normalizada volta para o navegador, que converte os horários para o fuso local
 ```
 
 ## Ordem de carregamento
@@ -190,59 +207,45 @@ No fim de `public/index.html`, os scripts são carregados nesta ordem:
 
 ```html
 <script src="sinopses-pt.js?v=1"></script>
-<script src="index.js?v=2"></script>
+<script src="index.js?v=3"></script>
 <script src="mangas.js?v=1"></script>
 ```
 
 `sinopses-pt.js` vem primeiro para que `window.SINOPSES_PT` já exista quando `index.js` renderizar um destaque.
 `mangas.js` vem por último e reaproveita duas funções definidas globalmente em `index.js` (`escaparHTML` e
-`mostrarMensagem`), então essa ordem precisa ser mantida. Os parâmetros `?v=1` e `?v=2` ajudam a invalidar o cache
-quando a versão do arquivo muda; `mangas.js` ainda não usa esse mesmo parâmetro.
+`mostrarMensagem`), então essa ordem precisa ser mantida. Os parâmetros `?v=` ajudam a invalidar o cache do
+navegador quando a versão do arquivo muda; `mangas.js` ainda não usa esse mesmo parâmetro.
 
 ## APIs
 
-### Jikan
+Todas as APIs externas são consultadas **só pelo back-end**, nunca direto do navegador. O navegador chama apenas
+`/api` (mesma origem), então o CSP fixa `connect-src 'self'`. Isso evita o problema de uma API externa devolver
+erro sem cabeçalho CORS (o navegador mostrava "erro de CORS" no lugar do 5xx real), tira o rate limit por IP
+compartilhado entre todos os visitantes e permite cache com reserva.
 
-URL base:
+### AniList (`src/services/anilist.service.js`)
 
-```text
-https://api.jikan.moe/v4
-```
+Endpoint GraphQL: `https://graphql.anilist.co`, consultado por `POST`. Fornece a agenda semanal com `airingAt`
+(Unix, em segundos), episódio, títulos, URL e capas `large`/`extraLarge`. `buscarAgendaSemanal()`:
 
-Endpoints usados:
+1. usa uma janela de 8 dias a partir da meia-noite UTC de ontem (margem para o "hoje" de qualquer fuso);
+2. percorre no máximo quatro páginas de 50, parando antes quando `hasNextPage` é `false`;
+3. deduplica por `mal_id`;
+4. devolve `{ fonte: "anilist", total, resultados }` sem converter o fuso — o navegador converte `airingAt`.
 
-- `/schedules?limit=24`: programação usada como fallback;
-- `/seasons/now?limit=12`: animes da temporada usados nos destaques.
+Timeout de 10 s, uma nova tentativa em 5xx, circuito aberto em 429, e `comRespostaDeReserva` guarda a última
+resposta boa para servir (marcada `obsoleto: true`) se a AniList cair depois.
 
-`buscarJSON()` centraliza a consulta Jikan. A função:
+### Jikan (`src/services/jikan.service.js`)
 
-1. cria um `AbortController`;
-2. estabelece timeout de 12 segundos;
-3. verifica `resposta.ok`;
-4. converte o corpo com `resposta.json()`;
-5. confirma que `dados.data` é um array;
-6. repete uma vez depois de 900 ms em status 429, status 500 ou superior e timeout;
-7. limpa o temporizador no `finally`.
+URL base: `https://api.jikan.moe/v4`. Endpoints:
 
-### AniList
+- `/seasons/now?limit=15`: animes da temporada, base dos destaques (filtra sem capa, ordena por nota, deduplica
+  por `mal_id` e por URL de capa);
+- `/schedules?limit=25`: programação alternativa usada quando a AniList falha (resolve o dia da semana para
+  `segunda`, `terca`, ... e devolve `horarioJST` em vez de `airingAt`).
 
-Endpoint GraphQL:
-
-```text
-https://graphql.anilist.co
-```
-
-O AniList é consultado por `POST` com corpo JSON. Ele fornece:
-
-- agenda entre o início do dia atual e os sete dias seguintes;
-- episódio e timestamp de exibição;
-- título em inglês ou romaji;
-- URL da mídia;
-- capas `large` e `extraLarge`;
-- banner, quando disponível.
-
-A agenda usa páginas de até 50 resultados e percorre no máximo quatro páginas. `hasNextPage` encerra o laço antes
-quando não existem mais resultados.
+Mesma proteção da AniList: timeout de 10 s, retry em 5xx, circuito em 429 e reserva da última resposta boa.
 
 ### MangaDex
 
@@ -270,47 +273,43 @@ caracteres para não estourar a cota gratuita do serviço.
 
 ## Fluxo do calendário
 
-1. `carregarCalendario()` mostra o estado de carregamento.
-2. O código tenta `buscarCalendarioAniList()`.
-3. Horários Unix em segundos são convertidos em `Date` e horário local.
-4. Se AniList falhar, Jikan fornece `/schedules?limit=24`.
-5. Os dados Jikan são limitados a dias reconhecidos e recebem a propriedade `dia`.
-6. `removerAnimesRepetidos()` elimina IDs ou títulos equivalentes.
-7. `adicionarCapasEmAlta()` tenta enriquecer os itens com imagens AniList.
-8. O array é salvo em `estado.calendario`.
-9. O total, o hero e a grade são renderizados.
-10. Em falha total, aparece uma mensagem com botão "Tentar novamente".
-11. O estado de carregamento é removido no `finally`.
+1. `carregarCalendario()`, em `index.js`, mostra o estado de carregamento e faz `fetch` em `/api/calendario`
+   (`buscarAPI()` dá timeout de 15 s e uma nova tentativa em 429/5xx).
+2. No back-end, `animes.controller.js` chama `anilist.service.js`; se ele falhar sem reserva, chama
+   `jikan.service.js` (`/schedules`). A resposta traz `fonte: "anilist"` ou `fonte: "jikan"`.
+3. Cada item passa por `prepararItemCalendario()`: quando tem `airingAt`, o navegador deriva o dia da semana e o
+   horário **no fuso de quem acessa**; quando é da Jikan, usa o `dia` já resolvido e o `horarioJST`.
+4. O array vai para `estado.calendario`; o total, o hero e a grade são renderizados.
+5. Em falha total (as duas fontes fora, sem reserva), aparece uma mensagem com botão "Tentar novamente".
+6. O estado de carregamento é removido no `finally`.
 
 ## Fallback
 
-O calendário tem duas fontes:
+O calendário tem duas fontes, escolhidas no back-end:
 
 ```text
-AniList (agenda preferida)
+AniList (agenda preferida, com horário exato)
+       ↓ falhou e não há reserva
+Jikan /schedules (programação alternativa, só dia + horário JST)
        ↓ falhou
-Jikan (programação alternativa)
-       ↓
-tratamento comum e renderização
+502/504 → o front-end mostra "O calendário tirou uma pausa"
 ```
 
-O enriquecimento de capas é opcional. Se a consulta AniList de imagens falhar, a função devolve os objetos
-originais, permitindo que as capas Jikan continuem sendo usadas.
+Antes disso, `comRespostaDeReserva` ainda pode servir a última resposta boa da AniList (marcada `obsoleto: true`)
+se ela tiver respondido em algum momento recente.
 
 ## Destaques
 
-`carregarDestaques()`:
+`carregarDestaques()`, em `index.js`, faz `fetch` em `/api/destaques`. Todo o trabalho é do back-end
+(`jikan.service.js`, `/seasons/now?limit=15`):
 
-1. consulta `/seasons/now?limit=12`;
-2. mantém itens com capa;
-3. ordena por nota decrescente;
-4. remove animes repetidos;
-5. tenta adicionar capas e banners maiores;
-6. remove URLs de capa repetidas;
-7. salva em `estado.destaques`;
-8. define o índice zero e renderiza o cartão.
+1. mantém itens com capa;
+2. ordena por nota decrescente;
+3. remove animes repetidos por `mal_id` e por URL de capa;
+4. devolve `{ total, resultados }`.
 
-Os botões anterior e próximo atualizam o índice com aritmética modular, fazendo a navegação circular.
+O front-end só guarda em `estado.destaques`, define o índice zero e renderiza o cartão. Os botões anterior e
+próximo atualizam o índice com aritmética modular, fazendo a navegação circular.
 
 ## Sinopses em português
 
@@ -447,15 +446,13 @@ Melhorias recomendadas:
 ## Tratamento de erros
 
 - timeout de rede no front-end e no back-end;
-- validação de status HTTP;
-- validação de arrays;
-- nova tentativa seletiva;
-- fallback entre APIs de anime;
-- falha opcional das capas;
-- circuito de proteção e fila no back-end para as APIs de mangá e tradução;
-- mensagens de vazio e falha;
-- botão de nova tentativa;
-- remoção do loading no `finally`.
+- validação de status HTTP e de arrays;
+- nova tentativa seletiva (429 e 5xx);
+- no back-end: fallback do calendário (AniList → Jikan) e reserva da última resposta boa do calendário e dos
+  destaques;
+- circuito de proteção e fila no back-end para cada API externa;
+- tradução de erro de serviço externo em resposta HTTP (`erroExterno.js`);
+- mensagens de vazio e falha, botão de nova tentativa e remoção do loading no `finally`.
 
 ## Segurança
 
@@ -463,10 +460,11 @@ Melhorias recomendadas:
 `innerHTML`, tanto em `index.js` quanto em `mangas.js`. Outros campos usam `textContent`, que não interpreta
 marcação. Links externos abertos em nova aba recebem `rel="noopener noreferrer"`.
 
-No back-end, `server.js` aplica `helmet` com uma política de `Content-Security-Policy` explícita (restringindo
-scripts, estilos, fontes, imagens e conexões aos domínios usados pelo projeto), desativa o cabeçalho
-`X-Powered-By` e aplica limites de taxa por IP em `/api` e, de forma mais restrita, em `/api/mangas`. O
-identificador de mangá é validado contra um formato de UUID antes de qualquer consulta ao MangaDex.
+No back-end, `server.js` aplica `helmet` com uma política de `Content-Security-Policy` explícita: `script-src`,
+`style-src`, `font-src` e `img-src` liberam só os domínios usados pelo projeto, e `connect-src` fica em `'self'`,
+já que o navegador só fala com `/api`. Também desativa o cabeçalho `X-Powered-By` e aplica limites de taxa por IP
+em `/api` e, de forma mais restrita, em `/api/mangas`. O identificador de mangá é validado contra um formato de
+UUID antes de qualquer consulta ao MangaDex.
 
 Limites atuais:
 
@@ -482,16 +480,18 @@ O back-end tem testes automatizados em `test/`, executados com o executor nativo
 npm test
 ```
 
-Os testes cobrem o cache e a coalescência de requisições simultâneas (`cache.test.js`), a validação de entrada do
-controller de mangás (`controller.validacao.test.js`), o serviço do MangaDex com `fetch` simulado, incluindo
-respostas 429, 500 e timeout (`mangadex.service.test.js`), e o limitador de taxa e o circuito de proteção
-(`protecaoExterna.test.js`). O front-end não tem testes automatizados.
+Os testes cobrem o cache, a coalescência de requisições simultâneas e a reserva da última resposta boa
+(`cache.test.js`), a validação de entrada do controller de mangás (`controller.validacao.test.js`), os serviços do
+MangaDex, do AniList e da Jikan com `fetch` simulado, incluindo respostas 429, 5xx e timeout, paginação e
+deduplicação (`mangadex.service.test.js`, `anilist.service.test.js`, `jikan.service.test.js`), o fallback do
+calendário AniList → Jikan no controller (`animes.controller.test.js`), e o limitador de taxa e o circuito de
+proteção (`protecaoExterna.test.js`). O front-end não tem testes automatizados.
 
 ## Como executar
 
-O front-end de anime funciona mesmo abrindo `public/index.html` diretamente no navegador, porque consulta a Jikan
-e a AniList direto do navegador. A busca de mangás não funciona dessa forma, porque depende do back-end em
-`/api/mangas`.
+Todas as seções (calendário, destaques e mangás) dependem do back-end, porque é ele que fala com as APIs
+externas. Abrir `public/index.html` direto no navegador mostra só a biblioteca inicial de mangás (embutida no
+próprio `mangas.js`), com os cards levando à página pública do MangaDex.
 
 Para rodar o projeto completo:
 
@@ -504,8 +504,10 @@ Isso inicia o servidor Express na porta definida em `PORT` (3000 por padrão) e 
 `public/`. Veja `.env.example` para as variáveis de ambiente opcionais (`PORT`, `TRUST_PROXY` e
 `ALLOWED_ORIGIN`).
 
-As APIs exigem internet e precisam aceitar requisições do navegador ou do servidor, dependendo do caso. Se elas
-estiverem indisponíveis ou limitarem requisições, o site mostrará os estados de erro previstos.
+As APIs externas exigem internet e são chamadas pelo servidor. Se elas estiverem indisponíveis ou limitarem
+requisições, o back-end serve a última resposta boa em cache (quando existe) ou devolve um erro, e o site mostra
+os estados previstos. Em setembro de 2026, por exemplo, a AniList suspendeu a API por instabilidade e a Jikan
+ficou intermitente; nesse cenário o calendário e os destaques ficam indisponíveis até uma das fontes voltar.
 
 ## `style(1).css` versus `style.css`
 
@@ -525,8 +527,9 @@ Os nomes precisam coincidir, inclusive espaços, parênteses e extensão.
 
 ## Limitações
 
-- conteúdo dinâmico depende de serviços externos, conexão e CORS;
-- não existe cache offline dos dados de anime nem de mangá;
+- conteúdo dinâmico depende de serviços externos e conexão (mas não mais de CORS: tudo passa por `/api`);
+- o cache e a reserva ficam em memória no processo do servidor: reiniciar (deploy, cold start no Render) zera a
+  reserva, e não há cache offline no navegador;
 - o import de Google Fonts também depende de internet;
 - as sinopses em português cobrem apenas IDs cadastrados;
 - a agenda AniList percorre no máximo quatro páginas;
@@ -538,7 +541,9 @@ Os nomes precisam coincidir, inclusive espaços, parênteses e extensão.
 
 ## Melhorias futuras
 
-- cache da última resposta do calendário e dos destaques, com suporte offline básico;
+- persistir o cache/reserva fora do processo (arquivo ou Redis) para sobreviver a reinícios, e cache offline no
+  navegador;
+- surfacing do campo `obsoleto: true` no front-end (aviso discreto de "dados podem estar desatualizados");
 - debounce da busca de anime e virtualização para listas grandes;
 - validação de URLs externas antes de renderizar imagens;
 - testes automatizados também para o front-end;
