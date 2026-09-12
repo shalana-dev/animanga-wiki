@@ -52,11 +52,13 @@ async function consultar(caminho, jaTentouNovamente = false) {
   }
 
   if (resposta.status >= 500 && !jaTentouNovamente) {
+    console.error(`Jikan respondeu ${resposta.status}, tentando de novo`);
     await new Promise((resolver) => setTimeout(resolver, 500));
     return consultar(caminho, true);
   }
 
   if (!resposta.ok) {
+    console.error(`Jikan respondeu ${resposta.status} (sem nova tentativa)`);
     throw new ErroServicoExterno("Jikan", resposta.status);
   }
 
