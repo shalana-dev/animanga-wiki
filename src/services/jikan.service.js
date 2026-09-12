@@ -33,9 +33,13 @@ async function consultar(caminho, jaTentouNovamente = false) {
   try {
     resposta = await fetch(`${JIKAN_API}${caminho}`, {
       signal: controlador.signal,
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "AnimangaWiki/1.0 (+https://animanga-wiki.onrender.com)",
+      },
     });
-  } catch {
+  } catch (erro) {
+    console.error("Jikan fetch falhou:", erro);
     throw new ErroServicoExterno("Jikan", 504);
   } finally {
     clearTimeout(limite);
